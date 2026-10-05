@@ -1,47 +1,68 @@
-import requests
 import json
+import requests
 
-# API URL
-url = "https://jsonplaceholder.typicode.com/users"
 
-# Fetch data from API
-response = requests.get(url)
+API_URL = "https://jsonplaceholder.typicode.com/users"
 
-# Convert API response into Python data
-users = response.json()
 
-# Task A2: Count total users
-print("Total Users:", len(users))
+def fetch_users():
+    """Fetch user data from the API."""
+    try:
+        response = requests.get(API_URL, timeout=10)
+        response.raise_for_status()
+        return response.json()
 
-# Task A4: Create processed user data
-processed_users = []
+    except requests.RequestException as error:
+        print("Error fetching users:", error)
+        return []
 
-for user in users:
 
-    user_data = {
-        "name": user["name"],
-        "email": user["email"],
-        "company": user["company"]["name"]
-    }
+def process_users(users):
+    """Extract required information from API response."""
+    processed_users = []
 
-    processed_users.append(user_data)
+    for user in users:
+        user_data = {
+            "name": user.get("name", ""),
+            "username": user.get("username", ""),
+            "email": user.get("email", ""),
+            "company": user.get("company", {}).get("name", "")
+        }
 
-# Task A1: Display user information
-print("\nUser Data:")
+        processed_users.append(user_data)
 
-for user in processed_users:
-    print(user)
+    return processed_users
 
-# Task A3: Extract company names
-companies = [user["company"] for user in processed_users]
 
-print("\nCompany Names:")
+def save_users(users):
+    """Save processed users to users.json."""
+    with open("users.json", "w", encoding="utf-8") as file:
+        json.dump(users, file, indent=4)
 
-for company in companies:
-    print(company)
 
-# Task A5: Save data into users.json
-with open("users.json", "w") as file:
-    json.dump(processed_users, file, indent=4)
+def main():
+    users = fetch_users()
 
-print("\nusers.json created successfully!")
+    if not users:
+        print("No user data available.")
+        return
+
+    processed_users = process_users(users)
+
+    print("Total Users:", len(processed_users))
+
+    print("\nUser Data:")
+    for user in processed_users:
+        print(user)
+
+    print("\nCompany Names:")
+    for user in processed_users:
+        print(user["company"])
+
+    save_users(processed_users)
+
+    print("\nusers.json created successfully!")
+
+
+if __name__ == "__main__":
+    main()

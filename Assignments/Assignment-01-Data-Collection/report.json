@@ -1,5 +1,37 @@
 {
-    "total_users": 10,
-    "total_books": 20,
-    "average_price": 38.05
+    "user_summary": {
+        "total_users": 10,
+        "group_company_users": [
+            {
+                "name": "Kurtis Weissnat",
+                "company": "Johns Group"
+            },
+            {
+                "name": "Nicholas Runolfsdottir V",
+                "company": "Abernathy Group"
+            }
+        ]
+    },
+    "book_summary": {
+        "total_books": 20,
+        "average_price": 38.05,
+        "high_rated_books": [
+            {
+                "title": "Sapiens: A Brief History of Humankind",
+                "rating": 5
+            },
+            {
+                "title": "Set Me Free",
+                "rating": 5
+            },
+            {
+                "title": "Scott Pilgrim's Precious Little Life (Scott Pilgrim #1)",
+                "rating": 5
+            },
+            {
+                "title": "Rip it Up and Start Again",
+                "rating": 5
+            }
+        ]
+    }
 }

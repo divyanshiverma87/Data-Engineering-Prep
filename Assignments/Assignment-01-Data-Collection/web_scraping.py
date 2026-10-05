@@ -1,84 +1,137 @@
-import requests
 import json
+import requests
 from bs4 import BeautifulSoup
 
-# Website URL
-url = "https://books.toscrape.com/"
 
-# Fetch webpage
-response = requests.get(url)
+URL = "https://books.toscrape.com/"
 
-# Create BeautifulSoup object
-soup = BeautifulSoup(response.text, "html.parser")
+RATING_VALUES = {
+    "One": 1,
+    "Two": 2,
+    "Three": 3,
+    "Four": 4,
+    "Five": 5
+}
 
-# Find all books
-books = soup.find_all("article", class_="product_pod")
 
-# Store book data
-book_data = []
+def fetch_webpage():
+    """Fetch the books webpage."""
+    try:
+        response = requests.get(URL, timeout=10)
+        response.raise_for_status()
+        return response.text
 
-for book in books:
+    except requests.RequestException as error:
+        print("Error fetching webpage:", error)
+        return None
 
-    # Extract title
-    title = book.h3.a["title"]
 
-    # Extract and clean price
-    price = book.find("p", class_="price_color").text.strip()
-    price = price.replace("Â£", "").replace("£", "")
-    price = float(price)
+def scrape_books(html):
+    """Extract book title, price, and rating."""
+    soup = BeautifulSoup(html, "html.parser")
+    books = soup.find_all("article", class_="product_pod")
 
-    # Extract rating
-    rating = book.find("p", class_="star-rating")["class"][1]
+    book_data = []
 
-    # Convert rating into number
-    rating_values = {
-        "One": 1,
-        "Two": 2,
-        "Three": 3,
-        "Four": 4,
-        "Five": 5
+    for book in books:
+        title_tag = book.h3.a
+        price_tag = book.find("p", class_="price_color")
+        rating_tag = book.find("p", class_="star-rating")
+
+        if not title_tag or not price_tag or not rating_tag:
+            continue
+
+        title = title_tag.get("title", "").strip()
+
+        price_text = price_tag.get_text(strip=True)
+        price_text = price_text.replace("Â£", "").replace("£", "").strip()
+
+        try:
+            price = float(price_text)
+        except ValueError:
+            continue
+
+        rating_name = rating_tag.get("class", [None, None])[1]
+
+        if rating_name not in RATING_VALUES:
+            continue
+
+        rating = RATING_VALUES[rating_name]
+
+        book_data.append({
+            "title": title,
+            "price": price,
+            "rating": rating
+        })
+
+    return book_data
+
+
+def analyze_prices(book_data):
+    """Calculate book price statistics."""
+    if not book_data:
+        return None
+
+    most_expensive = max(book_data, key=lambda book: book["price"])
+    least_expensive = min(book_data, key=lambda book: book["price"])
+    average_price = sum(book["price"] for book in book_data) / len(book_data)
+
+    return {
+        "most_expensive": most_expensive,
+        "least_expensive": least_expensive,
+        "average_price": round(average_price, 2)
     }
 
-    rating = rating_values[rating]
 
-    # Create dictionary
-    book_info = {
-        "title": title,
-        "price": price,
-        "rating": rating
-    }
-
-    book_data.append(book_info)
-
-# Display books
-print("\nBook Data:\n")
-
-for book in book_data:
-    print(book)
-
-# Task B4: Price Analysis
-
-prices = [book["price"] for book in book_data]
-
-most_expensive = max(book_data, key=lambda x: x["price"])
-least_expensive = min(book_data, key=lambda x: x["price"])
-average_price = sum(prices) / len(prices)
-
-print("\n--- Price Analysis ---")
-
-print("Most Expensive Book:")
-print(most_expensive["title"], "£", most_expensive["price"])
-
-print("\nLeast Expensive Book:")
-print(least_expensive["title"], "£", least_expensive["price"])
-
-print("\nAverage Book Price:")
-print(round(average_price, 2))
+def save_books(book_data):
+    """Save scraped data to books.json."""
+    with open("books.json", "w", encoding="utf-8") as file:
+        json.dump(book_data, file, indent=4)
 
 
+def main():
+    html = fetch_webpage()
 
-# Task B5: Save book data into books.json
-with open("books.json", "w") as file:
-    json.dump(book_data, file, indent=4)
+    if html is None:
+        return
 
-print("\nbooks.json created successfully!")
+    book_data = scrape_books(html)
+
+    if len(book_data) < 20:
+        print(f"Error: Only {len(book_data)} books were scraped.")
+        print("At least 20 books are required.")
+        return
+
+    print("\nBook Data:\n")
+
+    for book in book_data:
+        print(book)
+
+    price_analysis = analyze_prices(book_data)
+
+    print("\n--- Price Analysis ---")
+
+    print("Most Expensive Book:")
+    print(
+        price_analysis["most_expensive"]["title"],
+        "£",
+        price_analysis["most_expensive"]["price"]
+    )
+
+    print("\nLeast Expensive Book:")
+    print(
+        price_analysis["least_expensive"]["title"],
+        "£",
+        price_analysis["least_expensive"]["price"]
+    )
+
+    print("\nAverage Book Price:")
+    print(price_analysis["average_price"])
+
+    save_books(book_data)
+
+    print("\nbooks.json created successfully!")
+
+
+if __name__ == "__main__":
+    main()

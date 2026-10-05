@@ -1,87 +1,145 @@
 import json
 
-# Load JSON files
-with open("users.json", "r") as file:
-    users = json.load(file)
 
-with open("books.json", "r") as file:
-    books = json.load(file)
+USERS_FILE = "users.json"
+BOOKS_FILE = "books.json"
 
 
-# ==============================
-# USER ANALYSIS
-# ==============================
+def load_json(filename):
+    """Load data from a JSON file."""
+    try:
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
 
-print("========== USER ANALYSIS ==========")
+    except FileNotFoundError:
+        print(f"Error: {filename} was not found.")
+        return None
 
-# Total Users
-total_users = len(users)
-print("Total Users:", total_users)
-
-
-# Unique Companies
-companies = set(user["company"] for user in users)
-
-print("Unique Companies:", len(companies))
+    except json.JSONDecodeError:
+        print(f"Error: {filename} contains invalid JSON.")
+        return None
 
 
-# Top 5 Companies Alphabetically
-top_5_companies = sorted(companies)[:5]
+def analyze_users(users):
+    """Analyze user and company data."""
+    total_users = len(users)
 
-print("\nTop 5 Companies Alphabetically:")
+    companies = {
+        user.get("company", "")
+        for user in users
+        if user.get("company")
+    }
 
-for company in top_5_companies:
-    print(company)
+    top_5_companies = sorted(companies)[:5]
 
-
-# ==============================
-# BOOK ANALYSIS
-# ==============================
-
-print("\n========== BOOK ANALYSIS ==========")
-
-# Average Price
-average_price = sum(book["price"] for book in books) / len(books)
-
-print("Average Price: £", round(average_price, 2))
+    return {
+        "total_users": total_users,
+        "unique_companies": len(companies),
+        "top_5_companies": top_5_companies
+    }
 
 
-# Highest Rated Books
-highest_rating = max(book["rating"] for book in books)
+def analyze_books(books):
+    """Analyze book price and rating data."""
+    if not books:
+        return {
+            "average_price": 0,
+            "highest_rating": 0,
+            "highest_rated_books": [],
+            "rating_count": {}
+        }
 
-print("\nHighest Rated Books:")
+    prices = [
+        book.get("price", 0)
+        for book in books
+    ]
 
-for book in books:
-    if book["rating"] == highest_rating:
-        print(book["title"])
+    average_price = sum(prices) / len(prices)
+
+    highest_rating = max(
+        book.get("rating", 0)
+        for book in books
+    )
+
+    highest_rated_books = [
+        book["title"]
+        for book in books
+        if book.get("rating", 0) == highest_rating
+    ]
+
+    rating_count = {}
+
+    for book in books:
+        rating = book.get("rating")
+
+        if rating is not None:
+            rating_count[rating] = rating_count.get(rating, 0) + 1
+
+    return {
+        "average_price": round(average_price, 2),
+        "highest_rating": highest_rating,
+        "highest_rated_books": highest_rated_books,
+        "rating_count": rating_count
+    }
 
 
-# Number of Books in Each Rating Category
-rating_count = {}
+def display_analysis(user_analysis, book_analysis, total_books):
+    """Display the analysis results."""
 
-for book in books:
-    rating = book["rating"]
+    print("========== USER ANALYSIS ==========")
 
-    if rating in rating_count:
-        rating_count[rating] += 1
-    else:
-        rating_count[rating] = 1
+    print("Total Users:", user_analysis["total_users"])
+    print("Unique Companies:", user_analysis["unique_companies"])
+
+    print("\nTop 5 Companies Alphabetically:")
+    for company in user_analysis["top_5_companies"]:
+        print(company)
+
+    print("\n========== BOOK ANALYSIS ==========")
+
+    print("Total Books:", total_books)
+    print("Average Price: £", book_analysis["average_price"])
+
+    print("\nHighest Rated Books:")
+    for title in book_analysis["highest_rated_books"]:
+        print(title)
+
+    print("\nNumber of Books in Each Rating Category:")
+
+    for rating in sorted(book_analysis["rating_count"]):
+        count = book_analysis["rating_count"][rating]
+        print(f"Rating {rating}: {count} books")
+
+    print("\n========== SUMMARY ==========")
+
+    print("Total Users:", user_analysis["total_users"])
+    print("Unique Companies:", user_analysis["unique_companies"])
+    print("Total Books:", total_books)
+    print("Average Book Price: £", book_analysis["average_price"])
+    print("Highest Rating:", book_analysis["highest_rating"])
 
 
-print("\nNumber of Books in Each Rating Category:")
+def main():
+    users = load_json(USERS_FILE)
+    books = load_json(BOOKS_FILE)
 
-for rating in sorted(rating_count):
-    print("Rating", rating, ":", rating_count[rating], "books")
+    if users is None or books is None:
+        print("Unable to perform analysis.")
+        return
+
+    if not isinstance(users, list) or not isinstance(books, list):
+        print("Error: JSON data must contain lists.")
+        return
+
+    user_analysis = analyze_users(users)
+    book_analysis = analyze_books(books)
+
+    display_analysis(
+        user_analysis,
+        book_analysis,
+        len(books)
+    )
 
 
-# ==============================
-# SUMMARY
-# ==============================
-
-print("\n========== SUMMARY ==========")
-
-print("Total Users:", total_users)
-print("Unique Companies:", len(companies))
-print("Total Books:", len(books))
-print("Average Book Price: £", round(average_price, 2))
-print("Highest Rating:", highest_rating)
+if __name__ == "__main__":
+    main()
